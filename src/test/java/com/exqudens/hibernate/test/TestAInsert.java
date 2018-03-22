@@ -74,13 +74,19 @@ public class TestAInsert {
 
             emf = createEntityManagerFactory(DS_PREFIX, JPA_PREFIX, DS_IGNORE_KEYS);
 
+            System.out.println("1 ---------------------------------------------");
+
             em = emf.createEntityManager();
             em.persist(users.get(0));
+            System.out.println("1.1 ---------------------------------------------");
             em.getTransaction().begin();
             em.flush();
+            System.out.println("1.2 ---------------------------------------------");
             em.getTransaction().commit();
             em.clear();
             em.close();
+
+            System.out.println("2 ---------------------------------------------");
 
             em = emf.createEntityManager();
             User user = em.find(User.class, 1L);

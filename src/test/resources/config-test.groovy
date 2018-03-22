@@ -21,7 +21,7 @@ jpaProviders {
     hibernateJpaProvider {
         properties = [
             // 'hibernate.jdbc.batch.builder'                                  : "org.hibernate.engine.jdbc.batch.internal.BatchBuilderImpl",
-            'hibernate.ejb.identifier_generator_strategy_provider'          : "com.exqudens.hibernate.id.IdentifierGeneratorStrategyProviderImpl",
+            // 'hibernate.ejb.identifier_generator_strategy_provider'          : "com.exqudens.hibernate.id.IdentifierGeneratorStrategyProviderImpl",
 
             'hibernate.multiTenancy'                                        : "DATABASE",
             'hibernate.multi_tenant_connection_provider'                    : "com.exqudens.hibernate.multitenancy.MultiTenantConnectionProviderImpl",

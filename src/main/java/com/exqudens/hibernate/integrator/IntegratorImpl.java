@@ -1,18 +1,35 @@
 package com.exqudens.hibernate.integrator;
 
+import org.hibernate.annotations.common.reflection.ReflectionManager;
 import org.hibernate.boot.Metadata;
+import org.hibernate.boot.internal.MetadataImpl;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.event.internal.DefaultDeleteEventListener;
 import org.hibernate.event.service.spi.DuplicationStrategy;
+import org.hibernate.event.service.spi.EventListenerGroup;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.jpa.event.internal.core.HibernateEntityManagerEventListener;
+import org.hibernate.jpa.event.internal.jpa.CallbackBuilderLegacyImpl;
+import org.hibernate.jpa.event.internal.jpa.CallbackRegistryImpl;
+import org.hibernate.jpa.event.spi.jpa.CallbackBuilder;
+import org.hibernate.jpa.event.spi.jpa.CallbackRegistryConsumer;
+import org.hibernate.jpa.event.spi.jpa.ListenerFactory;
+import org.hibernate.jpa.event.spi.jpa.ListenerFactoryBuilder;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.exqudens.hibernate.listener.DeleteEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaAutoFlushEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaDeleteEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaFlushEntityEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaFlushEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaMergeEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaPersistEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaPersistOnFlushEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaSaveEventListenerImpl;
+import com.exqudens.hibernate.listener.JpaSaveOrUpdateEventListenerImpl;
 
 public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*/ implements Integrator {
 
@@ -27,31 +44,69 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
         REPLACE_ORIGINAL_DUPLICATION_STRATEGY = new ReplaceOriginalDuplicationStrategy();
     }
 
-    private Metadata metadata;
+    private CallbackRegistryImpl callbackRegistry;
+    private ListenerFactory jpaListenerFactory;
+    private CallbackBuilder callbackBuilder;
 
     private IntegratorImpl() {
         super();
         LOG.trace("");
     }
 
-    public Metadata getMetadata() {
-        return metadata;
-    }
-
     @Override
     public void integrate(Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         LOG.trace("");
-        this.metadata = metadata;
-        final EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
+        EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
+
         eventListenerRegistry.addDuplicationStrategy(REPLACE_ORIGINAL_DUPLICATION_STRATEGY);
-        eventListenerRegistry.setListeners(EventType.DELETE, new DefaultDeleteEventListener());
-        eventListenerRegistry.getEventListenerGroup(EventType.DELETE).prependListener(new DeleteEventListenerImpl());
+
+        eventListenerRegistry.setListeners(EventType.AUTO_FLUSH, new JpaAutoFlushEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.DELETE, new JpaDeleteEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.FLUSH_ENTITY, new JpaFlushEntityEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.FLUSH, new JpaFlushEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.MERGE, new JpaMergeEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.PERSIST, new JpaPersistEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.PERSIST_ONFLUSH, new JpaPersistOnFlushEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.SAVE, new JpaSaveEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.SAVE_UPDATE, new JpaSaveOrUpdateEventListenerImpl());
+
+        ReflectionManager reflectionManager = MetadataImpl.class.cast(metadata)
+        .getMetadataBuildingOptions()
+        .getReflectionManager();
+
+        this.callbackRegistry = new CallbackRegistryImpl();
+        this.jpaListenerFactory = ListenerFactoryBuilder.buildListenerFactory(sessionFactory.getSessionFactoryOptions());
+        this.callbackBuilder = new CallbackBuilderLegacyImpl(jpaListenerFactory, reflectionManager);
+        for (PersistentClass persistentClass : metadata.getEntityBindings()) {
+            if (persistentClass.getClassName() == null) {
+                // we can have non java class persisted by hibernate
+                continue;
+            }
+            callbackBuilder.buildCallbacksForEntity(persistentClass.getClassName(), callbackRegistry);
+        }
+
+        for (EventType<?> eventType : EventType.values()) {
+            final EventListenerGroup<?> eventListenerGroup = eventListenerRegistry.getEventListenerGroup(eventType);
+            for (Object listener : eventListenerGroup.listeners()) {
+                if (CallbackRegistryConsumer.class.isInstance(listener)) {
+                    CallbackRegistryConsumer.class.cast(listener).injectCallbackRegistry(callbackRegistry);
+                }
+            }
+        }
     }
 
     @Override
     public void disintegrate(SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         LOG.trace("");
-        this.metadata = null;
+        if (callbackRegistry != null) {
+            callbackRegistry.release();
+        }
+        if (callbackBuilder != null) {
+            callbackBuilder.release();
+        }
+        if (jpaListenerFactory != null) {
+            jpaListenerFactory.release();
+        }
     }
 
     private static class ReplaceOriginalDuplicationStrategy implements DuplicationStrategy {
