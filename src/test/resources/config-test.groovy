@@ -34,7 +34,7 @@ jpaProviders {
             'hibernate.globally_quoted_identifiers'                         : true,
             'hibernate.globally_quoted_identifiers_skip_column_definitions' : true,
             'hibernate.dialect.storage_engine'                              : "innodb",
-            'org.hibernate.flushMode'                                       : "COMMIT",
+            'org.hibernate.flushMode'                                       : "MANUAL",
             'hibernate.default_batch_fetch_size'                            : 1000,
             'hibernate.jdbc.use_get_generated_keys'                         : true,
             'hibernate.transaction.flush_before_completion'                 : false,

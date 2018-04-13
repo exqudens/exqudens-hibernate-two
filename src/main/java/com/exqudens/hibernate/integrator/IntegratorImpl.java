@@ -5,6 +5,7 @@ import org.hibernate.boot.Metadata;
 import org.hibernate.boot.internal.MetadataImpl;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.DuplicationStrategy;
+import org.hibernate.event.service.spi.DuplicationStrategy.Action;
 import org.hibernate.event.service.spi.EventListenerGroup;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
@@ -36,12 +37,10 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
     public static final IntegratorImpl INSTANCE;
 
     private static final Logger LOG;
-    private static final DuplicationStrategy REPLACE_ORIGINAL_DUPLICATION_STRATEGY;
 
     static {
         LOG = LoggerFactory.getLogger(IntegratorImpl.class);
         INSTANCE = new IntegratorImpl();
-        REPLACE_ORIGINAL_DUPLICATION_STRATEGY = new ReplaceOriginalDuplicationStrategy();
     }
 
     private CallbackRegistryImpl callbackRegistry;
@@ -58,17 +57,17 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
         LOG.trace("");
         EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
 
-        eventListenerRegistry.addDuplicationStrategy(REPLACE_ORIGINAL_DUPLICATION_STRATEGY);
+        eventListenerRegistry.addDuplicationStrategy(createDuplicationStrategy(Action.REPLACE_ORIGINAL));
 
-        eventListenerRegistry.setListeners(EventType.AUTO_FLUSH, new JpaAutoFlushEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.DELETE, new JpaDeleteEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.FLUSH_ENTITY, new JpaFlushEntityEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.AUTO_FLUSH, new JpaAutoFlushEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.DELETE, new JpaDeleteEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.FLUSH_ENTITY, new JpaFlushEntityEventListenerImpl());
         eventListenerRegistry.setListeners(EventType.FLUSH, new JpaFlushEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.MERGE, new JpaMergeEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.PERSIST, new JpaPersistEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.PERSIST_ONFLUSH, new JpaPersistOnFlushEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.SAVE, new JpaSaveEventListenerImpl());
-        eventListenerRegistry.setListeners(EventType.SAVE_UPDATE, new JpaSaveOrUpdateEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.MERGE, new JpaMergeEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.PERSIST, new JpaPersistEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.PERSIST_ONFLUSH, new JpaPersistOnFlushEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.SAVE, new JpaSaveEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.SAVE_UPDATE, new JpaSaveOrUpdateEventListenerImpl());
 
         ReflectionManager reflectionManager = MetadataImpl.class.cast(metadata)
         .getMetadataBuildingOptions()
@@ -109,17 +108,20 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
         }
     }
 
-    private static class ReplaceOriginalDuplicationStrategy implements DuplicationStrategy {
-        @Override
-        public boolean areMatch(Object listener, Object original) {
-            return listener.getClass().equals( original.getClass() ) &&
-                    HibernateEntityManagerEventListener.class.isInstance( original );
-        }
+    private DuplicationStrategy createDuplicationStrategy(Action action) {
+        return new DuplicationStrategy() {
 
-        @Override
-        public Action getAction() {
-            return Action.REPLACE_ORIGINAL;
-        }
+            @Override
+            public Action getAction() {
+                return action;
+            }
+
+            @Override
+            public boolean areMatch(Object listener, Object original) {
+                return listener.getClass().equals(original.getClass())
+                       && HibernateEntityManagerEventListener.class.isInstance(original);
+            }
+        };
     }
 
 }

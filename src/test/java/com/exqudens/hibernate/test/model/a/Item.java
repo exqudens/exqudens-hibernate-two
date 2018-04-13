@@ -28,7 +28,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Getter
 @Setter
-@ToString(of = {"id", "modified", "description", "children"})
+@ToString(exclude = {"id", "modified", "order", "parent", "children"})
 @Entity
 @Table(name = "item")
 public class Item {
@@ -56,7 +56,7 @@ public class Item {
     private Order order;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "parent_id", insertable = false)
+    @JoinColumn(name = "parent_id")
     @Fetch(FetchMode.SELECT)
     private Item parent;
 
