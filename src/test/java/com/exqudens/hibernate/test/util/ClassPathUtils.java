@@ -37,9 +37,7 @@ public class ClassPathUtils {
             }
             inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
             bufferedReader = new BufferedReader(inputStreamReader);
-            strings = bufferedReader
-            .lines()
-            .collect(Collectors.toList());
+            strings = bufferedReader.lines().collect(Collectors.toList());
             return strings;
         } finally {
             if (bufferedReader != null) {

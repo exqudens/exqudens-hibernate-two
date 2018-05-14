@@ -10,8 +10,13 @@ import org.slf4j.LoggerFactory;
 
 public class PersisterClassResolverImpl extends StandardPersisterClassResolver implements PersisterClassResolver {
 
-    private static final long serialVersionUID = -2279093707964592356L;
-    private static final Logger LOG = LoggerFactory.getLogger(PersisterClassResolverImpl.class);
+    private static final long   serialVersionUID;
+    private static final Logger LOG;
+
+    static {
+        serialVersionUID = -2279093707964592356L;
+        LOG = LoggerFactory.getLogger(PersisterClassResolverImpl.class);
+    }
 
     public PersisterClassResolverImpl() {
         super();

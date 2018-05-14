@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionProvider {
 
     private static final Logger LOG;
-    private static final long serialVersionUID;
+    private static final long   serialVersionUID;
 
     static {
         LOG = LoggerFactory.getLogger(MultiTenantConnectionProviderImpl.class);
@@ -23,7 +23,7 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
         serialVersionUID = -6011064288935442704L;
     }
 
-    private final Map<String, DataSource> dataSourceMap;
+    private final Map<String, DataSource>         dataSourceMap;
     private final CurrentTenantIdentifierResolver currentTenantIdentifierResolver;
 
     private String dataSourceKey;
@@ -102,7 +102,7 @@ public class MultiTenantConnectionProviderImpl implements MultiTenantConnectionP
         if (isUnwrappableAs(unwrapType)) {
             return unwrapType.cast(this);
         } else {
-            throw new UnknownUnwrapTypeException( unwrapType );
+            throw new UnknownUnwrapTypeException(unwrapType);
         }
     }
 

@@ -32,8 +32,8 @@ public class PersisterClassResolverInitiatorImpl implements StandardServiceIniti
 
     @Override
     public PersisterClassResolver initiateService(
-            @SuppressWarnings("rawtypes") Map configurationValues,
-            ServiceRegistryImplementor registry
+        @SuppressWarnings("rawtypes") Map configurationValues,
+        ServiceRegistryImplementor registry
     ) {
         LOG.trace("");
         return new PersisterClassResolverImpl();

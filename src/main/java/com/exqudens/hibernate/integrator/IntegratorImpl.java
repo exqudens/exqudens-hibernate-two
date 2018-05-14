@@ -22,17 +22,16 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.exqudens.hibernate.listener.JpaAutoFlushEventListenerImpl;
 import com.exqudens.hibernate.listener.JpaDeleteEventListenerImpl;
-import com.exqudens.hibernate.listener.JpaFlushEntityEventListenerImpl;
 import com.exqudens.hibernate.listener.JpaFlushEventListenerImpl;
 import com.exqudens.hibernate.listener.JpaMergeEventListenerImpl;
 import com.exqudens.hibernate.listener.JpaPersistEventListenerImpl;
-import com.exqudens.hibernate.listener.JpaPersistOnFlushEventListenerImpl;
-import com.exqudens.hibernate.listener.JpaSaveEventListenerImpl;
-import com.exqudens.hibernate.listener.JpaSaveOrUpdateEventListenerImpl;
 
-public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*/ implements Integrator {
+/**
+ * @author exqudens
+ * @see org.hibernate.jpa.event.spi.JpaIntegrator
+ */
+public class IntegratorImpl implements Integrator {
 
     public static final IntegratorImpl INSTANCE;
 
@@ -44,8 +43,8 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
     }
 
     private CallbackRegistryImpl callbackRegistry;
-    private ListenerFactory jpaListenerFactory;
-    private CallbackBuilder callbackBuilder;
+    private ListenerFactory      jpaListenerFactory;
+    private CallbackBuilder      callbackBuilder;
 
     private IntegratorImpl() {
         super();
@@ -53,28 +52,33 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
     }
 
     @Override
-    public void integrate(Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
+    public void integrate(
+        Metadata metadata,
+        SessionFactoryImplementor sessionFactory,
+        SessionFactoryServiceRegistry serviceRegistry
+    ) {
         LOG.trace("");
-        EventListenerRegistry eventListenerRegistry = serviceRegistry.getService( EventListenerRegistry.class );
+        EventListenerRegistry eventListenerRegistry = serviceRegistry.getService(EventListenerRegistry.class);
 
         eventListenerRegistry.addDuplicationStrategy(createDuplicationStrategy(Action.REPLACE_ORIGINAL));
 
-        //eventListenerRegistry.setListeners(EventType.AUTO_FLUSH, new JpaAutoFlushEventListenerImpl());
-        //eventListenerRegistry.setListeners(EventType.DELETE, new JpaDeleteEventListenerImpl());
-        //eventListenerRegistry.setListeners(EventType.FLUSH_ENTITY, new JpaFlushEntityEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.PERSIST, new JpaPersistEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.MERGE, new JpaMergeEventListenerImpl());
+        eventListenerRegistry.setListeners(EventType.DELETE, new JpaDeleteEventListenerImpl());
         eventListenerRegistry.setListeners(EventType.FLUSH, new JpaFlushEventListenerImpl());
-        //eventListenerRegistry.setListeners(EventType.MERGE, new JpaMergeEventListenerImpl());
-        //eventListenerRegistry.setListeners(EventType.PERSIST, new JpaPersistEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.AUTO_FLUSH, new JpaAutoFlushEventListenerImpl());
+        //eventListenerRegistry.setListeners(EventType.FLUSH_ENTITY, new JpaFlushEntityEventListenerImpl());
         //eventListenerRegistry.setListeners(EventType.PERSIST_ONFLUSH, new JpaPersistOnFlushEventListenerImpl());
         //eventListenerRegistry.setListeners(EventType.SAVE, new JpaSaveEventListenerImpl());
         //eventListenerRegistry.setListeners(EventType.SAVE_UPDATE, new JpaSaveOrUpdateEventListenerImpl());
 
-        ReflectionManager reflectionManager = MetadataImpl.class.cast(metadata)
-        .getMetadataBuildingOptions()
+        ReflectionManager reflectionManager = MetadataImpl.class.cast(metadata).getMetadataBuildingOptions()
         .getReflectionManager();
 
         this.callbackRegistry = new CallbackRegistryImpl();
-        this.jpaListenerFactory = ListenerFactoryBuilder.buildListenerFactory(sessionFactory.getSessionFactoryOptions());
+        this.jpaListenerFactory = ListenerFactoryBuilder.buildListenerFactory(
+            sessionFactory.getSessionFactoryOptions()
+        );
         this.callbackBuilder = new CallbackBuilderLegacyImpl(jpaListenerFactory, reflectionManager);
         for (PersistentClass persistentClass : metadata.getEntityBindings()) {
             if (persistentClass.getClassName() == null) {
@@ -118,8 +122,8 @@ public class IntegratorImpl /*extends org.hibernate.jpa.event.spi.JpaIntegrator*
 
             @Override
             public boolean areMatch(Object listener, Object original) {
-                return listener.getClass().equals(original.getClass())
-                       && HibernateEntityManagerEventListener.class.isInstance(original);
+                return listener.getClass().equals(original.getClass()) && HibernateEntityManagerEventListener.class
+                .isInstance(original);
             }
         };
     }

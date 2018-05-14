@@ -1,17 +1,14 @@
 package com.exqudens.hibernate.persister;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.io.Serializable;
+import java.util.List;
 
-import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 public interface PostInsertIdentityPersister extends org.hibernate.id.PostInsertIdentityPersister {
 
-    int dehydrateIdentityInsert(
-            Object entity,
-            PreparedStatement ps,
-            SharedSessionContractImplementor session
-    ) throws SQLException, HibernateException;
+    List<Serializable> insert(List<Object> entities, SharedSessionContractImplementor session);
+
+    void delete(List<Object> entities, SharedSessionContractImplementor session);
 
 }

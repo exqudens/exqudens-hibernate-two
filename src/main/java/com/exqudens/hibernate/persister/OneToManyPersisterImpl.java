@@ -26,10 +26,11 @@ public class OneToManyPersisterImpl extends OneToManyPersister {
     }
 
     public OneToManyPersisterImpl(
-            Collection collectionBinding,
-            CollectionRegionAccessStrategy cacheAccessStrategy,
-            PersisterCreationContext creationContext
-    ) throws MappingException, CacheException {
+        Collection collectionBinding,
+        CollectionRegionAccessStrategy cacheAccessStrategy,
+        PersisterCreationContext creationContext
+    ) throws MappingException,
+    CacheException {
         super(collectionBinding, cacheAccessStrategy, creationContext);
         LOG.trace("");
     }
@@ -44,10 +45,15 @@ public class OneToManyPersisterImpl extends OneToManyPersister {
     private void preInitialize(SharedSessionContractImplementor session) {
         LOG.trace("");
         PhysicalConnectionHandlingMode mode1 = PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT;
-        PhysicalConnectionHandlingMode mode2 = session.getJdbcCoordinator().getLogicalConnection().getConnectionHandlingMode();
+        PhysicalConnectionHandlingMode mode2 = session.getJdbcCoordinator().getLogicalConnection()
+        .getConnectionHandlingMode();
         if (mode1.equals(mode2)) {
-            MultiTenantConnectionProvider service = session.getFactory().getServiceRegistry().getService(MultiTenantConnectionProvider.class);
-            MultiTenantConnectionProviderImpl.class.cast(service).setDataSourceKey(getCollectionMetadata().getElementType().getReturnedClass().getName());
+            MultiTenantConnectionProvider service = session.getFactory().getServiceRegistry().getService(
+                MultiTenantConnectionProvider.class
+            );
+            MultiTenantConnectionProviderImpl.class.cast(service).setDataSourceKey(
+                getCollectionMetadata().getElementType().getReturnedClass().getName()
+            );
         }
     }
 

@@ -20,7 +20,7 @@
   <logger name='org.jboss.logging' level='ERROR'/>
   <logger name='org.hibernate' level='ERROR'/>
   <logger name='org.hibernate.SQL' level='ERROR'/>
-  <logger name='MySQL' level='ERROR'/>
+  <logger name='MySQL' level='INFO'/>
   <logger name='com.exqudens.hibernate' level='ERROR'/>
   <logger name='com.exqudens.hibernate.test' level='ERROR'/>
 

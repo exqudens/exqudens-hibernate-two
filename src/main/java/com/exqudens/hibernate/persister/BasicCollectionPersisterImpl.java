@@ -18,10 +18,11 @@ public class BasicCollectionPersisterImpl extends BasicCollectionPersister {
     }
 
     public BasicCollectionPersisterImpl(
-            Collection collectionBinding,
-            CollectionRegionAccessStrategy cacheAccessStrategy,
-            PersisterCreationContext creationContext
-    ) throws MappingException, CacheException {
+        Collection collectionBinding,
+        CollectionRegionAccessStrategy cacheAccessStrategy,
+        PersisterCreationContext creationContext
+    ) throws MappingException,
+    CacheException {
         super(collectionBinding, cacheAccessStrategy, creationContext);
         LOG.trace("");
     }

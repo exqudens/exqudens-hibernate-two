@@ -15,8 +15,15 @@ import javax.persistence.spi.PersistenceUnitInfo;
 import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.sql.DataSource;
 
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
+import org.hibernate.jpa.boot.spi.IntegratorProvider;
+import org.hibernate.persister.internal.PersisterClassResolverInitiator;
+import org.hibernate.service.StandardServiceInitiators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.exqudens.hibernate.multitenancy.MultiTenantConnectionProviderImpl;
 
 public class PersistenceUnitInfoUtils {
 
@@ -34,43 +41,76 @@ public class PersistenceUnitInfoUtils {
         OPENJPA_PERSISTENCE_PROVIDER_CLASS_NAME = "org.apache.openjpa.persistence.PersistenceProviderImpl";
     }
 
-    /*public static PersistenceUnitInfo createPersistenceUnitInfoSpring(DataSource dataSource, Class<?>... classes) {
-        LOG.trace("");
-        org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager persistenceUnitManager;
-        persistenceUnitManager = new org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager();
-        persistenceUnitManager.setDefaultDataSource(dataSource);
-        persistenceUnitManager.setPackagesToScan(classes[0].getPackage().getName());
-        persistenceUnitManager.afterPropertiesSet();
-        PersistenceUnitInfo info = persistenceUnitManager.obtainDefaultPersistenceUnitInfo();
-        return info;
-    }*/
-
-    public static PersistenceUnitInfo createPersistenceUnitInfo(
-            String persistenceUnitName,
-            String persistenceProviderClassName,
-            Map<String, ?> properties,
-            Class<?>... classes
+    public static PersistenceUnitInfo createHibernatePersistenceUnitInfo(
+        String persistenceUnitName,
+        Map<String, DataSource> dataSourceMap,
+        Map<String, Object> properties,
+        Class<?>... classes
     ) {
         LOG.trace("");
-        return createPersistenceUnitInfo(
+        try {
+            Object integratorProviderClassName = properties.get(EntityManagerFactoryBuilderImpl.INTEGRATOR_PROVIDER);
+            if (integratorProviderClassName != null) {
+                Class<?> integratorProviderClass = Class.forName(integratorProviderClassName.toString());
+                IntegratorProvider integratorProvider = IntegratorProvider.class.cast(
+                    integratorProviderClass.newInstance()
+                );
+                properties.put(EntityManagerFactoryBuilderImpl.INTEGRATOR_PROVIDER, integratorProvider);
+            }
+
+            Object multiTenantConnectionProviderClassName = properties.get(
+                AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER
+            );
+            if (multiTenantConnectionProviderClassName != null) {
+                if (
+                    MultiTenantConnectionProviderImpl.class.getName().equals(
+                        multiTenantConnectionProviderClassName.toString()
+                    )
+                ) {
+                    MultiTenantConnectionProviderImpl multiTenantConnectionProviderImpl = new MultiTenantConnectionProviderImpl(
+                        dataSourceMap
+                    );
+                    properties.put(
+                        AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER,
+                        multiTenantConnectionProviderImpl
+                    );
+                    properties.put(
+                        AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER,
+                        multiTenantConnectionProviderImpl.getCurrentTenantIdentifierResolver()
+                    );
+                }
+            }
+
+            StandardServiceInitiators.LIST = StandardServiceInitiators.LIST.stream().map(
+                s -> s instanceof PersisterClassResolverInitiator
+                ? com.exqudens.hibernate.persister.PersisterClassResolverInitiatorImpl.INSTANCE
+                : s
+            ).collect(Collectors.toList());
+
+            return createPersistenceUnitInfo(
                 persistenceUnitName,
-                persistenceProviderClassName,
+                HIBERNATE_PERSISTENCE_PROVIDER_CLASS_NAME,
                 null,
                 null,
                 PersistenceUnitTransactionType.RESOURCE_LOCAL,
                 properties,
                 classes
-        );
+            );
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public static PersistenceUnitInfo createPersistenceUnitInfo(
-            String persistenceUnitName,
-            String persistenceProviderClassName,
-            DataSource nonJtaDataSource,
-            DataSource jtaDataSource,
-            PersistenceUnitTransactionType persistenceUnitTransactionType,
-            Map<String, ?> properties,
-            Class<?>... classes
+    private static PersistenceUnitInfo createPersistenceUnitInfo(
+        String persistenceUnitName,
+        String persistenceProviderClassName,
+        DataSource nonJtaDataSource,
+        DataSource jtaDataSource,
+        PersistenceUnitTransactionType persistenceUnitTransactionType,
+        Map<String, ?> properties,
+        Class<?>... classes
     ) {
         LOG.trace("");
         return new PersistenceUnitInfo() {
@@ -109,11 +149,7 @@ public class PersistenceUnitInfoUtils {
 
             @Override
             public List<String> getManagedClassNames() {
-                List<String> list = Arrays
-                .asList(classes)
-                .stream()
-                .map(Class::getName)
-                .collect(Collectors.toList());
+                List<String> list = Arrays.asList(classes).stream().map(Class::getName).collect(Collectors.toList());
                 return list;
             }
 
@@ -125,7 +161,6 @@ public class PersistenceUnitInfoUtils {
             @Override
             public List<URL> getJarFileUrls() {
                 List<URL> list;
-                //list = Collections.list(this.getClass().getClassLoader().getResources(""));
                 list = Collections.emptyList();
                 return list;
             }

@@ -16,19 +16,20 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import com.exqudens.hibernate.test.model.a.Item;
-import com.exqudens.hibernate.test.model.a.Order;
-import com.exqudens.hibernate.test.model.a.User;
+import com.exqudens.hibernate.test.model.b.Item;
+import com.exqudens.hibernate.test.model.b.Order;
+import com.exqudens.hibernate.test.model.b.User;
 import com.exqudens.hibernate.test.util.ClassPathUtils;
 import com.exqudens.hibernate.test.util.ConfigGroovyUtils;
 import com.exqudens.hibernate.test.util.DataSourceUtils;
 import com.exqudens.hibernate.util.PersistenceUnitInfoUtils;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class TestModelA {
+public class TestModelB {
 
     private static final String   DS_PREFIX;
     private static final String   JPA_PREFIX;
@@ -59,6 +60,7 @@ public class TestModelA {
         em = emf.createEntityManager();
     }
 
+    @Ignore
     @Test
     public void test1Create() {
         System.out.println("=== test1Create =========================================================================");
@@ -68,20 +70,18 @@ public class TestModelA {
 
         users.add(new User(null, null, "email_" + 1, new ArrayList<>()));
 
-        orders.add(new Order(null, null, "orderNumber_" + 1, null, new ArrayList<>()));
-        orders.add(new Order(null, null, "orderNumber_" + 2, null, new ArrayList<>()));
-        orders.add(new Order(null, null, "orderNumber_" + 3, null, new ArrayList<>()));
+        orders.add(new Order(null, null, "orderNumber_" + 1, new ArrayList<>()));
 
-        items.add(new Item(null, null, "description_" + 1, null, null, new ArrayList<>()));
-        items.add(new Item(null, null, "description_" + 2, null, null, new ArrayList<>()));
-        items.add(new Item(null, null, "description_" + 3, null, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 1, null, null, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 2, null, null, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 3, null, null, null, new ArrayList<>()));
 
-        users.get(0).getOrders().addAll(orders);
+        users.get(0).getItems().addAll(items);
 
-        orders.stream().forEach(o -> o.setUser(users.get(0)));
-        orders.get(1).setItems(items);
+        orders.get(0).getItems().addAll(items);
 
-        items.stream().forEach(i -> i.setOrder(orders.get(1)));
+        items.stream().forEach(i -> i.setUser(users.get(0)));
+        items.stream().forEach(i -> i.setOrder(orders.get(0)));
 
         items.get(1).getChildren().add(items.get(0));
         items.get(1).getChildren().add(items.get(2));
@@ -90,6 +90,7 @@ public class TestModelA {
 
         try {
             em.persist(users.get(0));
+            em.persist(orders.get(0));
             em.getTransaction().begin();
             em.flush();
             em.getTransaction().commit();
@@ -102,39 +103,27 @@ public class TestModelA {
         System.out.println("=========================================================================================");
     }
 
+    @Ignore
     @Test
     public void test2Read() {
         System.out.println("=== test2Read ===========================================================================");
         User user = em.find(User.class, 1L);
+        Order order = user.getItems().get(0).getOrder();
         em.clear();
         System.out.println(user);
+        System.out.println(order);
         System.out.println("=========================================================================================");
     }
 
+    @Ignore
     @Test
     public void test3Update() {
         System.out.println("=== test3Update =========================================================================");
-
-        User user = em.find(User.class, 1L);
-        user.setEmail("email_999");
-
-        try {
-            em.merge(user);
-            em.getTransaction().begin();
-            em.flush();
-            em.getTransaction().commit();
-            em.clear();
-        } catch (Exception e) {
-            em.getTransaction().rollback();
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-
-        user = em.find(User.class, 1L);
-        System.out.println(user);
+        System.out.println();
         System.out.println("=========================================================================================");
     }
 
+    @Ignore
     @Test
     public void test4Delete() {
         System.out.println("=== test4Delete =========================================================================");
@@ -157,7 +146,7 @@ public class TestModelA {
     @AfterClass
     public static void afterClass() {
         if (emf != null && emf.isOpen()) {
-            // emf.close();
+            //emf.close();
         }
     }
 

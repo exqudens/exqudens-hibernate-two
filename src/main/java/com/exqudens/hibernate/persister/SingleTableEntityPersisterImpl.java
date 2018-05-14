@@ -2,10 +2,14 @@ package com.exqudens.hibernate.persister;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -19,9 +23,11 @@ import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.engine.spi.ExecuteUpdateResultCheckStyle;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.id.IdentifierGeneratorHelper;
 import org.hibernate.loader.entity.CascadeEntityLoader;
 import org.hibernate.loader.entity.UniqueEntityLoader;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.MultiLoadOptions;
 import org.hibernate.persister.entity.SingleTableEntityPersister;
 import org.hibernate.persister.spi.PersisterCreationContext;
@@ -42,17 +48,18 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     private final boolean isMySQLDialect;
 
     public SingleTableEntityPersisterImpl(
-            PersistentClass persistentClass,
-            EntityRegionAccessStrategy cacheAccessStrategy,
-            NaturalIdRegionAccessStrategy naturalIdRegionAccessStrategy,
-            PersisterCreationContext creationContext
+        PersistentClass persistentClass,
+        EntityRegionAccessStrategy cacheAccessStrategy,
+        NaturalIdRegionAccessStrategy naturalIdRegionAccessStrategy,
+        PersisterCreationContext creationContext
     ) throws HibernateException {
         super(persistentClass, cacheAccessStrategy, naturalIdRegionAccessStrategy, creationContext);
         LOG.trace("");
         isMySQLDialect = getFactory().getJdbcServices().getDialect() instanceof MySQLDialect;
         if (isMySQLDialect) {
-            IntStream.range(0, updateResultCheckStyles.length)
-            .forEach(i -> updateResultCheckStyles[i] = ExecuteUpdateResultCheckStyle.NONE);
+            IntStream.range(0, updateResultCheckStyles.length).forEach(
+                i -> updateResultCheckStyles[i] = ExecuteUpdateResultCheckStyle.NONE
+            );
         }
     }
 
@@ -63,13 +70,22 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     }
 
     @Override
-    protected Serializable insert(Object[] fields, boolean[] notNull, String sql, Object object, SharedSessionContractImplementor session) throws HibernateException {
+    protected Serializable insert(
+        Object[] fields,
+        boolean[] notNull,
+        String sql,
+        Object object,
+        SharedSessionContractImplementor session
+    ) throws HibernateException {
         LOG.trace("");
         return super.insert(fields, notNull, sql, object, session);
     }
 
     @Override
-    protected UniqueEntityLoader getAppropriateLoader(LockOptions lockOptions, SharedSessionContractImplementor session) {
+    protected UniqueEntityLoader getAppropriateLoader(
+        LockOptions lockOptions,
+        SharedSessionContractImplementor session
+    ) {
         UniqueEntityLoader loader = super.getAppropriateLoader(lockOptions, session);
         if (loader instanceof CascadeEntityLoader) {
             return (UniqueEntityLoader) getLoaders().get(LockMode.READ);
@@ -78,48 +94,78 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     }
 
     @Override
-    public Object load(Serializable id, Object optionalObject, LockMode lockMode, SharedSessionContractImplementor session) {
+    public Object load(
+        Serializable id,
+        Object optionalObject,
+        LockMode lockMode,
+        SharedSessionContractImplementor session
+    ) {
         LOG.trace("");
         preLoad(session);
         return super.load(id, optionalObject, lockMode, session);
     }
 
     @Override
-    public Object load(Serializable id, Object optionalObject, LockOptions lockOptions, SharedSessionContractImplementor session) throws HibernateException {
+    public Object load(
+        Serializable id,
+        Object optionalObject,
+        LockOptions lockOptions,
+        SharedSessionContractImplementor session
+    ) throws HibernateException {
         LOG.trace("");
         preLoad(session);
         return super.load(id, optionalObject, lockOptions, session);
     }
 
     @Override
-    public Object loadByUniqueKey(String propertyName, Object uniqueKey, SharedSessionContractImplementor session) throws HibernateException {
+    public Object loadByUniqueKey(String propertyName, Object uniqueKey, SharedSessionContractImplementor session)
+    throws HibernateException {
         LOG.trace("");
         preLoad(session);
         return super.loadByUniqueKey(propertyName, uniqueKey, session);
     }
 
     @Override
-    public Serializable loadEntityIdByNaturalId(Object[] naturalIdValues, LockOptions lockOptions, SharedSessionContractImplementor session) {
+    public Serializable loadEntityIdByNaturalId(
+        Object[] naturalIdValues,
+        LockOptions lockOptions,
+        SharedSessionContractImplementor session
+    ) {
         LOG.trace("");
         preLoad(session);
         return super.loadEntityIdByNaturalId(naturalIdValues, lockOptions, session);
     }
 
     @Override
-    public List<?> multiLoad(Serializable[] ids, SharedSessionContractImplementor session, MultiLoadOptions loadOptions) {
+    public List<?> multiLoad(
+        Serializable[] ids,
+        SharedSessionContractImplementor session,
+        MultiLoadOptions loadOptions
+    ) {
         LOG.trace("");
         preLoad(session);
         return super.multiLoad(ids, session, loadOptions);
     }
 
     @Override
-    public void update(Serializable id, Object[] fields, int[] dirtyFields, boolean hasDirtyCollection, Object[] oldFields, Object oldVersion, Object object, Object rowId, SharedSessionContractImplementor session) throws HibernateException {
+    public void update(
+        Serializable id,
+        Object[] fields,
+        int[] dirtyFields,
+        boolean hasDirtyCollection,
+        Object[] oldFields,
+        Object oldVersion,
+        Object object,
+        Object rowId,
+        SharedSessionContractImplementor session
+    ) throws HibernateException {
         LOG.trace("");
         super.update(id, fields, dirtyFields, hasDirtyCollection, oldFields, oldVersion, object, rowId, session);
     }
 
     @Override
-    public void delete(Serializable id, Object version, Object object, SharedSessionContractImplementor session) throws HibernateException {
+    public void delete(Serializable id, Object version, Object object, SharedSessionContractImplementor session)
+    throws HibernateException {
         LOG.trace("");
         super.delete(id, version, object, session);
     }
@@ -135,30 +181,154 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     }
 
     @Override
-    public int dehydrateIdentityInsert(
-            Object entity,
-            PreparedStatement ps,
-            SharedSessionContractImplementor session
-    ) throws SQLException, HibernateException {
+    public List<Serializable> insert(List<Object> entities, SharedSessionContractImplementor session) {
         LOG.trace("");
-        return dehydrate(
-                null,
-                getPropertyValues(entity),
-                getPropertyInsertability(),
-                getPropertyColumnInsertable(),
-                0,
-                ps,
-                session,
-                false
-        );
+        String insertSQL = generateIdentityInsertString(getPropertyInsertability());
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            List<Serializable> ids = new LinkedList<>();
+            for (List<Object> batch : toBatches(entities, getJdbcBatchSize(session))) {
+                ps = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection().prepareStatement(
+                    insertSQL,
+                    PreparedStatement.RETURN_GENERATED_KEYS
+                );
+                for (Object entity : batch) {
+
+                    dehydrate(
+                        null,
+                        getPropertyValues(entity),
+                        getPropertyInsertability(),
+                        getPropertyColumnInsertable(),
+                        0,
+                        ps,
+                        session,
+                        false
+                    );
+                    session.getJdbcServices().getSqlStatementLogger().logStatement(insertSQL);
+
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                rs = ps.getGeneratedKeys();
+                while (rs.next()) {
+                    Serializable serializable = IdentifierGeneratorHelper.get(
+                        rs,
+                        getRootTableKeyColumnNames()[0],
+                        getIdentifierType(),
+                        session.getJdbcServices().getJdbcEnvironment().getDialect()
+                    );
+                    ids.add(serializable);
+                }
+            }
+            return ids;
+        } catch (RuntimeException e) {
+            LOG.error(insertSQL, e);
+            throw e;
+        } catch (Exception e) {
+            LOG.error(insertSQL, e);
+            throw new RuntimeException(e);
+        } finally {
+            session.getJdbcCoordinator().getLogicalConnection().getResourceRegistry().release(rs, ps);
+            session.getJdbcCoordinator().afterStatementExecution();
+        }
+    }
+
+    @Override
+    public void delete(List<Object> entities, SharedSessionContractImplementor session) {
+        LOG.trace("");
+        SingleTableEntityPersisterImpl persister = null;
+        List<Serializable> keys = null;
+        PreparedStatement ps = null;
+        try {
+
+            for (List<Object> batch : toBatches(entities, getJdbcBatchSize(session))) {
+
+                if (!batch.isEmpty()) {
+
+                    if (persister == null) {
+                        EntityPersister entityPersister = session.getEntityPersister(null, batch.get(0));
+                        persister = SingleTableEntityPersisterImpl.class.cast(entityPersister);
+                    }
+
+                    String[] keyColumns = persister.getKeyColumns(0);
+
+                    if (keyColumns.length == 1) {
+
+                        keys = new LinkedList<>();
+
+                        for (Object entity : batch) {
+                            Serializable key = persister.getIdentifier(entity, session);
+                            keys.add(key);
+                        }
+
+                        String sql = Arrays.asList(
+                            "delete from ",
+                            persister.getTableName(0),
+                            " where ",
+                            keyColumns[0],
+                            " in (",
+                            keys.stream().map(s -> "?").collect(Collectors.joining(", ")),
+                            ")"
+                        ).stream().collect(Collectors.joining());
+                        ps = session.getJdbcCoordinator().getStatementPreparer().prepareStatement(sql, false);
+
+                        for (int j = 0; j < keys.size(); j++) {
+                            ps.setObject(j + 1, keys.get(j));
+                        }
+                        ps.executeUpdate();
+                    } else {
+
+                        for (Object entity : batch) {
+                            Serializable identifier = persister.getIdentifier(entity, session);
+                            Object vers = persister.getVersion(entity);
+                            persister.delete(identifier, vers, entity, session);
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (ps != null) {
+                session.getJdbcCoordinator().getLogicalConnection().getResourceRegistry().release(ps);
+                session.getJdbcCoordinator().afterStatementExecution();
+            }
+        }
+    }
+
+    private <E> List<List<E>> toBatches(List<E> list, int size) {
+        Function<Entry<Integer, E>, Integer> classifier;
+        classifier = (Entry<Integer, E> e) -> {
+            int number = e.getKey().intValue();
+            if (number % size != 0) {
+                return number / size * size + size;
+            } else {
+                return number;
+            }
+        };
+        Function<Entry<Integer, E>, E> mapper = (Entry<Integer, E> e) -> e.getValue();
+        return IntStream.range(0, list.size()).mapToObj(i -> new SimpleEntry<>(i + 1, list.get(i))).collect(
+            Collectors.groupingBy(classifier, LinkedHashMap::new, Collectors.mapping(mapper, Collectors.toList()))
+        ).values().stream().collect(Collectors.toList());
+    }
+
+    private int getJdbcBatchSize(SharedSessionContractImplementor session) {
+        return session.getJdbcBatchSize() != null ? session.getJdbcBatchSize()
+        : session.getFactory().getSessionFactoryOptions().getJdbcBatchSize();
     }
 
     private void preLoad(SharedSessionContractImplementor session) {
         LOG.trace("");
         PhysicalConnectionHandlingMode mode1 = PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT;
-        PhysicalConnectionHandlingMode mode2 = session.getJdbcCoordinator().getLogicalConnection().getConnectionHandlingMode();
+        PhysicalConnectionHandlingMode mode2 = session.getJdbcCoordinator().getLogicalConnection()
+        .getConnectionHandlingMode();
         if (mode1.equals(mode2)) {
-            MultiTenantConnectionProvider service = session.getFactory().getServiceRegistry().getService(MultiTenantConnectionProvider.class);
+            MultiTenantConnectionProvider service = session.getFactory().getServiceRegistry().getService(
+                MultiTenantConnectionProvider.class
+            );
             MultiTenantConnectionProviderImpl.class.cast(service).setDataSourceKey(getEntityMetamodel().getName());
             session.getJdbcCoordinator().getLogicalConnection().manualDisconnect();
         }
@@ -186,12 +356,14 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
             idColumnNames.addAll(Arrays.asList(getKeyColumns(tableIndex)));
         }
         String newUpdateString = Arrays.asList(
-                "insert into ",
-                getTableName(),
-                Stream.concat(columnNames.stream(), idColumnNames.stream()).collect(Collectors.joining(", ", " (", ")")),
-                IntStream.range(0, columnNames.size() + idColumnNames.size()).mapToObj(i -> "?").collect(Collectors.joining(", ", " values (", ")")),
-                " on duplicate key update ",
-                columnNames.stream().map(c -> c + " = values(" + c + ")").collect(Collectors.joining(", "))
+            "insert into ",
+            getTableName(),
+            Stream.concat(columnNames.stream(), idColumnNames.stream()).collect(Collectors.joining(", ", " (", ")")),
+            IntStream.range(0, columnNames.size() + idColumnNames.size()).mapToObj(i -> "?").collect(
+                Collectors.joining(", ", " values (", ")")
+            ),
+            " on duplicate key update ",
+            columnNames.stream().map(c -> c + " = values(" + c + ")").collect(Collectors.joining(", "))
         ).stream().collect(Collectors.joining());
         return newUpdateString;
     }

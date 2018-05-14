@@ -37,13 +37,23 @@ public class SortUtils {
         LOG.trace("");
     }
 
+    /**
+     * @author exqudens
+     * @see org.hibernate.engine.spi.ActionQueue.InsertActionSorter.sort
+     * @param entities
+     * @param session
+     * @return
+     */
     public static List<List<Object>> sort(List<Object> entities, SharedSessionContractImplementor session) {
         LOG.trace("");
         Map<BatchIdentifier, List<Object>> actionBatches = null;
         List<BatchIdentifier> latestBatches = new ArrayList<>();
         for (Object entity : entities) {
             EntityPersister entityPersister = session.getEntityPersister(null, entity);
-            BatchIdentifier batchIdentifier = new BatchIdentifier(entityPersister.getEntityName(), entityPersister.getRootEntityName());
+            BatchIdentifier batchIdentifier = new BatchIdentifier(
+                entityPersister.getEntityName(),
+                entityPersister.getRootEntityName()
+            );
 
             int index = latestBatches.indexOf(batchIdentifier);
             if (index != -1) {
@@ -112,7 +122,11 @@ public class SortUtils {
         return sorted;
     }
 
-    private static void addParentChildEntityNames(Object entity, BatchIdentifier batchIdentifier, SharedSessionContractImplementor session) {
+    private static void addParentChildEntityNames(
+        Object entity,
+        BatchIdentifier batchIdentifier,
+        SharedSessionContractImplementor session
+    ) {
         LOG.trace("");
         EntityPersister entityPersister = session.getEntityPersister(null, entity);
         Object[] propertyValues = entityPersister.getPropertyValuesToInsert(entity, Collections.emptyMap(), session);
@@ -128,9 +142,13 @@ public class SortUtils {
                 if (type.isEntityType() && value != null) {
                     EntityType entityType = (EntityType) type;
                     String entityName = entityType.getName();
-                    String rootEntityName = session.getFactory().getMetamodel().entityPersister(entityName).getRootEntityName();
+                    String rootEntityName = session.getFactory().getMetamodel().entityPersister(entityName)
+                    .getRootEntityName();
 
-                    if (entityType.isOneToOne() && OneToOneType.class.cast(entityType).getForeignKeyDirection() == ForeignKeyDirection.TO_PARENT) {
+                    if (
+                        entityType.isOneToOne() && OneToOneType.class.cast(entityType)
+                        .getForeignKeyDirection() == ForeignKeyDirection.TO_PARENT
+                    ) {
                         batchIdentifier.getChildEntityNames().add(entityName);
                         if (!rootEntityName.equals(entityName)) {
                             batchIdentifier.getChildEntityNames().add(rootEntityName);
@@ -146,7 +164,8 @@ public class SortUtils {
                     SessionFactoryImplementor sessionFactory = session.getFactory();
                     if (collectionType.getElementType(sessionFactory).isEntityType()) {
                         String entityName = collectionType.getAssociatedEntityName(sessionFactory);
-                        String rootEntityName = session.getFactory().getMetamodel().entityPersister(entityName).getRootEntityName();
+                        String rootEntityName = session.getFactory().getMetamodel().entityPersister(entityName)
+                        .getRootEntityName();
                         batchIdentifier.getChildEntityNames().add(entityName);
                         if (!rootEntityName.equals(entityName)) {
                             batchIdentifier.getChildEntityNames().add(rootEntityName);
@@ -157,7 +176,11 @@ public class SortUtils {
         }
     }
 
-    private static Map<BatchIdentifier, List<Object>> addToBatch(BatchIdentifier batchIdentifier, Object entity, Map<BatchIdentifier, List<Object>> actionBatches) {
+    private static Map<BatchIdentifier, List<Object>> addToBatch(
+        BatchIdentifier batchIdentifier,
+        Object entity,
+        Map<BatchIdentifier, List<Object>> actionBatches
+    ) {
         LOG.trace("");
         if (actionBatches == null) {
             actionBatches = new HashMap<>();
@@ -177,7 +200,11 @@ public class SortUtils {
         List<Object> second = new ArrayList<>();
         for (Object entity : entities) {
             EntityPersister entityPersister = session.getEntityPersister(null, entity);
-            Object[] propertyValues = entityPersister.getPropertyValuesToInsert(entity, Collections.emptyMap(), session);
+            Object[] propertyValues = entityPersister.getPropertyValuesToInsert(
+                entity,
+                Collections.emptyMap(),
+                session
+            );
             ClassMetadata classMetadata = entityPersister.getClassMetadata();
             boolean added = false;
 
@@ -215,7 +242,7 @@ public class SortUtils {
         private final String rootEntityName;
 
         private Set<String> parentEntityNames = new HashSet<>();
-        private Set<String> childEntityNames = new HashSet<>();
+        private Set<String> childEntityNames  = new HashSet<>();
 
         public BatchIdentifier(String entityName, String rootEntityName) {
             super();
@@ -268,7 +295,9 @@ public class SortUtils {
         }
 
         public boolean hasAnyParentEntityNames(BatchIdentifier batchIdentifier) {
-            return parentEntityNames.contains(batchIdentifier.getEntityName()) || parentEntityNames.contains(batchIdentifier.getRootEntityName());
+            return parentEntityNames.contains(batchIdentifier.getEntityName()) || parentEntityNames.contains(
+                batchIdentifier.getRootEntityName()
+            );
         }
 
         public boolean hasAnyChildEntityNames(BatchIdentifier batchIdentifier) {
