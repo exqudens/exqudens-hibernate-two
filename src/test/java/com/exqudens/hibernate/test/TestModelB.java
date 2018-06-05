@@ -60,7 +60,7 @@ public class TestModelB {
         em = emf.createEntityManager();
     }
 
-    @Ignore
+    //@Ignore
     @Test
     public void test1Create() {
         System.out.println("=== test1Create =========================================================================");
@@ -68,29 +68,29 @@ public class TestModelB {
         List<Order> orders = new ArrayList<>();
         List<Item> items = new ArrayList<>();
 
-        users.add(new User(null, null, "email_" + 1, new ArrayList<>()));
+        users.add(new User(null, null, "email_" + 1, null, new ArrayList<>()));
 
-        orders.add(new Order(null, null, "orderNumber_" + 1, new ArrayList<>()));
+        orders.add(new Order(null, null, "orderNumber_" + 1, null, new ArrayList<>()));
+        orders.add(new Order(null, null, "orderNumber_" + 2, null, new ArrayList<>()));
 
-        items.add(new Item(null, null, "description_" + 1, null, null, null, new ArrayList<>()));
-        items.add(new Item(null, null, "description_" + 2, null, null, null, new ArrayList<>()));
-        items.add(new Item(null, null, "description_" + 3, null, null, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 1, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 2, null, new ArrayList<>()));
+        items.add(new Item(null, null, "description_" + 3, null, new ArrayList<>()));
 
-        users.get(0).getItems().addAll(items);
+        users.get(0).getOrders().addAll(orders);
 
         orders.get(0).getItems().addAll(items);
 
-        items.stream().forEach(i -> i.setUser(users.get(0)));
+        orders.stream().forEach(o -> o.setUser(users.get(0)));
+
         items.stream().forEach(i -> i.setOrder(orders.get(0)));
 
-        items.get(1).getChildren().add(items.get(0));
-        items.get(1).getChildren().add(items.get(2));
-        items.get(0).setParent(items.get(1));
-        items.get(2).setParent(items.get(1));
+        items.get(2).getUsers().addAll(users);
+
+        users.get(0).setItem(items.get(2));
 
         try {
             em.persist(users.get(0));
-            em.persist(orders.get(0));
             em.getTransaction().begin();
             em.flush();
             em.getTransaction().commit();
@@ -108,10 +108,8 @@ public class TestModelB {
     public void test2Read() {
         System.out.println("=== test2Read ===========================================================================");
         User user = em.find(User.class, 1L);
-        Order order = user.getItems().get(0).getOrder();
         em.clear();
         System.out.println(user);
-        System.out.println(order);
         System.out.println("=========================================================================================");
     }
 

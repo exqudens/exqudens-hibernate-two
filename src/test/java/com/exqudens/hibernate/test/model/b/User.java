@@ -10,6 +10,8 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -30,7 +32,8 @@ import lombok.ToString;
     exclude = {
         "id",
         "modified",
-        "items"
+        "item",
+        "orders"
     }
 )
 @Entity
@@ -54,8 +57,13 @@ public class User {
     @Column(name = "email")
     private String email;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "item_id")
+    @Fetch(FetchMode.SELECT)
+    private Item item;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SELECT)
-    private List<Item> items;
+    private List<Order> orders;
 
 }

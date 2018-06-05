@@ -24,7 +24,7 @@
   <logger name='com.exqudens.hibernate' level='ERROR'/>
   <logger name='com.exqudens.hibernate.test' level='ERROR'/>
 
-  <logger name='com.exqudens.hibernate.listener' level='ALL'/>
+  <logger name='com.exqudens.hibernate.test' level='ERROR'/>
 
   <root level='ALL'>
     <appender-ref ref='CONSOLE'/>

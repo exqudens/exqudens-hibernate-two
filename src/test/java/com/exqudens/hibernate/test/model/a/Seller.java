@@ -1,4 +1,4 @@
-package com.exqudens.hibernate.test.model.b;
+package com.exqudens.hibernate.test.model.a;
 
 import java.util.Date;
 import java.util.List;
@@ -10,8 +10,6 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -32,17 +30,16 @@ import lombok.ToString;
     exclude = {
         "id",
         "modified",
-        "user",
-        "items"
+        "orders"
     }
 )
 @Entity
-@Table(name = "order")
-public class Order {
+@Table(name = "seller")
+public class Seller {
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
-    @Column(name = "order_id")
+    @Column(name = "seller_id")
     private Long id;
 
     @Column(
@@ -54,16 +51,11 @@ public class Order {
     )
     private Date modified;
 
-    @Column(name = "order_number")
-    private String orderNumber;
+    @Column(name = "name")
+    private String name;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id")
+    @OneToMany(mappedBy = "seller", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SELECT)
-    private User user;
-
-    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @Fetch(FetchMode.SELECT)
-    private List<Item> items;
+    private List<Order> orders;
 
 }

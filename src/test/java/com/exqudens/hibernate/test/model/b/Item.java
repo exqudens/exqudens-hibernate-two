@@ -32,10 +32,8 @@ import lombok.ToString;
     exclude = {
         "id",
         "modified",
-        "user",
         "order",
-        "parent",
-        "children"
+        "users"
     }
 )
 @Entity
@@ -60,22 +58,12 @@ public class Item {
     private String description;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id")
-    @Fetch(FetchMode.SELECT)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "order_id")
     @Fetch(FetchMode.SELECT)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "parent_id")
+    @OneToMany(mappedBy = "item", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SELECT)
-    private Item parent;
-
-    @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @Fetch(FetchMode.SELECT)
-    private List<Item> children;
+    private List<User> users;
 
 }

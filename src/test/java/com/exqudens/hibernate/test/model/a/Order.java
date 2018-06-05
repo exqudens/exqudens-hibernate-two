@@ -28,7 +28,15 @@ import lombok.ToString;
 @AllArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = {"id", "modified", "user", "items"})
+@ToString(
+    exclude = {
+        "id",
+        "modified",
+        "user",
+        "seller",
+        "items"
+    }
+)
 @Entity
 @Table(name = "order")
 public class Order {
@@ -54,6 +62,11 @@ public class Order {
     @JoinColumn(name = "user_id")
     @Fetch(FetchMode.SELECT)
     private User user;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "seller_id")
+    @Fetch(FetchMode.SELECT)
+    private Seller seller;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @Fetch(FetchMode.SELECT)

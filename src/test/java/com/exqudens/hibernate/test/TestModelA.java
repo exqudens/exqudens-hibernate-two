@@ -16,11 +16,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import com.exqudens.hibernate.test.model.a.Item;
 import com.exqudens.hibernate.test.model.a.Order;
+import com.exqudens.hibernate.test.model.a.Seller;
 import com.exqudens.hibernate.test.model.a.User;
 import com.exqudens.hibernate.test.util.ClassPathUtils;
 import com.exqudens.hibernate.test.util.ConfigGroovyUtils;
@@ -59,18 +61,22 @@ public class TestModelA {
         em = emf.createEntityManager();
     }
 
+    //@Ignore
     @Test
     public void test1Create() {
         System.out.println("=== test1Create =========================================================================");
         List<User> users = new ArrayList<>();
+        List<Seller> sellers = new ArrayList<>();
         List<Order> orders = new ArrayList<>();
         List<Item> items = new ArrayList<>();
 
         users.add(new User(null, null, "email_" + 1, new ArrayList<>()));
 
-        orders.add(new Order(null, null, "orderNumber_" + 1, null, new ArrayList<>()));
-        orders.add(new Order(null, null, "orderNumber_" + 2, null, new ArrayList<>()));
-        orders.add(new Order(null, null, "orderNumber_" + 3, null, new ArrayList<>()));
+        sellers.add(new Seller(null, null, "name_1", new ArrayList<>()));
+
+        orders.add(new Order(null, null, "orderNumber_" + 1, null, null, new ArrayList<>()));
+        orders.add(new Order(null, null, "orderNumber_" + 2, null, null, new ArrayList<>()));
+        orders.add(new Order(null, null, "orderNumber_" + 3, null, null, new ArrayList<>()));
 
         items.add(new Item(null, null, "description_" + 1, null, null, new ArrayList<>()));
         items.add(new Item(null, null, "description_" + 2, null, null, new ArrayList<>()));
@@ -78,7 +84,10 @@ public class TestModelA {
 
         users.get(0).getOrders().addAll(orders);
 
+        sellers.get(0).getOrders().addAll(orders);
+
         orders.stream().forEach(o -> o.setUser(users.get(0)));
+        orders.stream().forEach(o -> o.setSeller(sellers.get(0)));
         orders.get(1).setItems(items);
 
         items.stream().forEach(i -> i.setOrder(orders.get(1)));
@@ -90,6 +99,7 @@ public class TestModelA {
 
         try {
             em.persist(users.get(0));
+            em.persist(sellers.get(0));
             em.getTransaction().begin();
             em.flush();
             em.getTransaction().commit();
@@ -102,6 +112,7 @@ public class TestModelA {
         System.out.println("=========================================================================================");
     }
 
+    @Ignore
     @Test
     public void test2Read() {
         System.out.println("=== test2Read ===========================================================================");
@@ -111,6 +122,7 @@ public class TestModelA {
         System.out.println("=========================================================================================");
     }
 
+    @Ignore
     @Test
     public void test3Update() {
         System.out.println("=== test3Update =========================================================================");
@@ -135,16 +147,23 @@ public class TestModelA {
         System.out.println("=========================================================================================");
     }
 
+    //@Ignore
     @Test
     public void test4Delete() {
         System.out.println("=== test4Delete =========================================================================");
         User user = em.find(User.class, 1L);
         em.remove(user);
+        em.remove(user.getOrders().get(0).getSeller());
         em.getTransaction().begin();
         em.flush();
         em.getTransaction().commit();
         em.clear();
         System.out.println("=========================================================================================");
+    }
+
+    @Ignore
+    @Test
+    public void test0() {
     }
 
     @After
@@ -183,6 +202,7 @@ public class TestModelA {
                 dataSourceMap,
                 properties,
                 User.class,
+                Seller.class,
                 Order.class,
                 Item.class
             );

@@ -49,20 +49,31 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
         List<List<Object>> insertCacheSorted = SortUtils.sort(insertCache, event.getSession());
         for (List<Object> batch : insertCacheSorted) {
             EntityPersister ep = event.getSession().getEntityPersister(null, batch.iterator().next());
-            PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
-            List<Serializable> ids = step.insert(batch, event.getSession());
-            for (int i = 0; i < batch.size(); i++) {
-                EntityKey entityKey = event.getSession().getPersistenceContext().getEntry(batch.get(i)).getEntityKey();
-                event.getSession().getPersistenceContext().replaceDelayedEntityIdentityInsertKeys(
-                    entityKey,
-                    ids.get(i)
-                );
+            if (ep.getIdentifierType().isComponentType()) {
+                throw new UnsupportedOperationException();
+            } else {
+                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
+                List<Serializable> ids = step.insert(batch, event.getSession());
+                for (int i = 0; i < batch.size(); i++) {
+                    EntityKey entityKey = event.getSession().getPersistenceContext().getEntry(batch.get(i))
+                    .getEntityKey();
+                    event.getSession().getPersistenceContext().replaceDelayedEntityIdentityInsertKeys(
+                        entityKey,
+                        ids.get(i)
+                    );
+                }
             }
             System.out.println("insert DONE: " + batch);
         }
 
         List<List<Object>> updateCacheSorted = SortUtils.sort(updateCache, event.getSession());
         for (List<Object> batch : updateCacheSorted) {
+            EntityPersister ep = event.getSession().getEntityPersister(null, batch.iterator().next());
+            if (ep.getIdentifierType().isComponentType()) {
+                throw new UnsupportedOperationException();
+            } else {
+                // TODO
+            }
             System.out.println("update DONE: " + batch);
         }
 
@@ -70,8 +81,12 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
         for (int i = deleteCacheSorted.size() - 1; i >= 0; i--) {
             List<Object> batch = deleteCacheSorted.get(i);
             EntityPersister ep = event.getSession().getEntityPersister(null, batch.iterator().next());
-            PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
-            step.delete(batch, event.getSession());
+            if (ep.getIdentifierType().isComponentType()) {
+                throw new UnsupportedOperationException();
+            } else {
+                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
+                step.delete(batch, event.getSession());
+            }
             System.out.println("delete DONE: " + batch);
         }
 
