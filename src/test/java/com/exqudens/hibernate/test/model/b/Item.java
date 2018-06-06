@@ -28,14 +28,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Getter
 @Setter
-@ToString(
-    exclude = {
-        "id",
-        "modified",
-        "order",
-        "users"
-    }
-)
+@ToString(of = "id")
 @Entity
 @Table(name = "item")
 public class Item {
