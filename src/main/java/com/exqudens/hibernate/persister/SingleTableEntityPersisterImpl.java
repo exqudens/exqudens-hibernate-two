@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -17,6 +18,7 @@ import java.util.stream.Stream;
 import org.hibernate.HibernateException;
 import org.hibernate.LockMode;
 import org.hibernate.LockOptions;
+import org.hibernate.action.internal.DelayedPostInsertIdentifier;
 import org.hibernate.cache.spi.access.EntityRegionAccessStrategy;
 import org.hibernate.cache.spi.access.NaturalIdRegionAccessStrategy;
 import org.hibernate.dialect.MySQLDialect;
@@ -32,6 +34,7 @@ import org.hibernate.persister.entity.MultiLoadOptions;
 import org.hibernate.persister.entity.SingleTableEntityPersister;
 import org.hibernate.persister.spi.PersisterCreationContext;
 import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode;
+import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,23 +184,42 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     }
 
     @Override
-    public List<Serializable> insert(List<Object> entities, SharedSessionContractImplementor session) {
+    public List<Entry<Serializable, Object>> insert(List<Object> entities, SharedSessionContractImplementor session) {
         LOG.trace("");
         String insertSQL = generateIdentityInsertString(getPropertyInsertability());
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            List<Serializable> ids = new LinkedList<>();
+            List<Entry<Serializable, Object>> idDelayedUpdates = new LinkedList<>();
             for (List<Object> batch : toBatches(entities, getJdbcBatchSize(session))) {
                 ps = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection().prepareStatement(
                     insertSQL,
                     PreparedStatement.RETURN_GENERATED_KEYS
                 );
+                List<Object> delayedUpdateEntities = new ArrayList<>();
                 for (Object entity : batch) {
+
+                    Object delayedUpdateEntity = null;
+                    Type[] propertyTypes = getPropertyTypes();
+                    Object[] propertyValues = getPropertyValues(entity);
+                    for (int i = 0; i < propertyTypes.length; i++) {
+                        if (
+                            propertyTypes[i].isAssociationType() && !propertyTypes[i].isCollectionType() && session
+                            .getPersistenceContext().getEntry(propertyValues[i]) != null
+                        ) {
+                            Serializable identifier = session.getPersistenceContext().getEntry(propertyValues[i])
+                            .getEntityKey().getIdentifier();
+                            if (identifier != null && identifier instanceof DelayedPostInsertIdentifier) {
+                                propertyValues[i] = null;
+                                delayedUpdateEntity = entity;
+                            }
+                        }
+                    }
+                    delayedUpdateEntities.add(delayedUpdateEntity);
 
                     dehydrate(
                         null,
-                        getPropertyValues(entity),
+                        propertyValues,
                         getPropertyInsertability(),
                         getPropertyColumnInsertable(),
                         0,
@@ -211,17 +233,18 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
                 }
                 ps.executeBatch();
                 rs = ps.getGeneratedKeys();
-                while (rs.next()) {
-                    Serializable serializable = IdentifierGeneratorHelper.get(
+                for (Object delayedUpdateEntity : delayedUpdateEntities) {
+                    rs.next();
+                    Serializable id = IdentifierGeneratorHelper.get(
                         rs,
                         getRootTableKeyColumnNames()[0],
                         getIdentifierType(),
                         session.getJdbcServices().getJdbcEnvironment().getDialect()
                     );
-                    ids.add(serializable);
+                    idDelayedUpdates.add(new SimpleEntry<>(id, delayedUpdateEntity));
                 }
             }
-            return ids;
+            return idDelayedUpdates;
         } catch (RuntimeException e) {
             LOG.error(insertSQL, e);
             throw e;
@@ -232,6 +255,11 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
             session.getJdbcCoordinator().getLogicalConnection().getResourceRegistry().release(rs, ps);
             session.getJdbcCoordinator().afterStatementExecution();
         }
+    }
+
+    @Override
+    public void update(List<Object> entities, SharedSessionContractImplementor session) {
+        LOG.trace("");
     }
 
     @Override

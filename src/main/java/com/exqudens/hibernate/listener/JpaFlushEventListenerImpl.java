@@ -3,6 +3,7 @@ package com.exqudens.hibernate.listener;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.EntityKey;
@@ -53,14 +54,19 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
                 throw new UnsupportedOperationException();
             } else {
                 PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
-                List<Serializable> ids = step.insert(batch, event.getSession());
+                List<Entry<Serializable, Object>> insertEntries = step.insert(batch, event.getSession());
                 for (int i = 0; i < batch.size(); i++) {
                     EntityKey entityKey = event.getSession().getPersistenceContext().getEntry(batch.get(i))
                     .getEntityKey();
                     event.getSession().getPersistenceContext().replaceDelayedEntityIdentityInsertKeys(
                         entityKey,
-                        ids.get(i)
+                        insertEntries.get(i).getKey()
                     );
+                }
+                for (Entry<Serializable, Object> insertEntry : insertEntries) {
+                    if (insertEntry.getValue() != null) {
+                        updateCache.add(insertEntry.getValue());
+                    }
                 }
             }
             System.out.println("insert DONE: " + batch);
@@ -72,7 +78,8 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
             if (ep.getIdentifierType().isComponentType()) {
                 throw new UnsupportedOperationException();
             } else {
-                // TODO
+                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
+                step.update(batch, event.getSession());
             }
             System.out.println("update DONE: " + batch);
         }
