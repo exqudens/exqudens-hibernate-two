@@ -18,7 +18,7 @@ import org.hibernate.persister.entity.EntityPersister;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.exqudens.hibernate.persister.PostInsertIdentityPersister;
+import com.exqudens.hibernate.persister.Persister;
 import com.exqudens.hibernate.util.SortUtils;
 
 public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements FlushEventListener {
@@ -51,10 +51,11 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
         for (List<Object> batch : insertCacheSorted) {
             EntityPersister ep = event.getSession().getEntityPersister(null, batch.iterator().next());
             if (ep.getIdentifierType().isComponentType()) {
-                throw new UnsupportedOperationException();
+                Persister step = Persister.class.cast(ep);
+                step.insert(batch, event.getSession());
             } else {
-                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
-                List<Entry<Serializable, Object>> insertEntries = step.insert(batch, event.getSession());
+                Persister step = Persister.class.cast(ep);
+                List<Entry<Serializable, Object>> insertEntries = step.insertIdentity(batch, event.getSession());
                 for (int i = 0; i < batch.size(); i++) {
                     EntityKey entityKey = event.getSession().getPersistenceContext().getEntry(batch.get(i))
                     .getEntityKey();
@@ -78,7 +79,7 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
             if (ep.getIdentifierType().isComponentType()) {
                 throw new UnsupportedOperationException();
             } else {
-                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
+                Persister step = Persister.class.cast(ep);
                 step.update(batch, event.getSession());
             }
             System.out.println("update DONE: " + batch);
@@ -91,7 +92,7 @@ public class JpaFlushEventListenerImpl extends JpaFlushEventListener implements 
             if (ep.getIdentifierType().isComponentType()) {
                 throw new UnsupportedOperationException();
             } else {
-                PostInsertIdentityPersister step = PostInsertIdentityPersister.class.cast(ep);
+                Persister step = Persister.class.cast(ep);
                 step.delete(batch, event.getSession());
             }
             System.out.println("delete DONE: " + batch);

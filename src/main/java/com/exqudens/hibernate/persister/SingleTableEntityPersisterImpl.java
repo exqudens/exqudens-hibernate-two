@@ -26,6 +26,8 @@ import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.engine.spi.ExecuteUpdateResultCheckStyle;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGeneratorHelper;
+import org.hibernate.jdbc.Expectation;
+import org.hibernate.jdbc.Expectations;
 import org.hibernate.loader.entity.CascadeEntityLoader;
 import org.hibernate.loader.entity.UniqueEntityLoader;
 import org.hibernate.mapping.PersistentClass;
@@ -40,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import com.exqudens.hibernate.multitenancy.MultiTenantConnectionProviderImpl;
 
-public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister implements PostInsertIdentityPersister {
+public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister implements Persister {
 
     private static final Logger LOG;
 
@@ -184,7 +186,52 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     }
 
     @Override
-    public List<Entry<Serializable, Object>> insert(List<Object> entities, SharedSessionContractImplementor session) {
+    public void insert(List<Object> entities, SharedSessionContractImplementor session) {
+        LOG.trace("");
+        boolean[] propertyInsertability = getPropertyInsertability();
+        String insertSQL = generateInsertString(false, propertyInsertability);
+        PreparedStatement ps = null;
+
+        try {
+
+            for (List<Object> batch : toBatches(entities, getJdbcBatchSize(session))) {
+
+                ps = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection().prepareStatement(insertSQL);
+
+                for (Object entity : batch) {
+
+                    Serializable id = getIdentifier(entity, session);
+                    Object[] fields = getPropertyValues(entity);
+                    boolean[][] propertyColumnInsertable = getPropertyColumnInsertable();
+                    int j = 0;
+                    int index = 1;
+                    Expectation expectation = Expectations.appropriateExpectation(insertResultCheckStyles[j]);
+                    index += expectation.prepare( ps );
+
+                    dehydrate( id, fields, null, propertyInsertability, propertyColumnInsertable, j, ps, session, index, false );
+
+                    session.getJdbcServices().getSqlStatementLogger().logStatement(insertSQL);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+        } catch (RuntimeException e) {
+            LOG.error(insertSQL, e);
+            throw e;
+        } catch (Exception e) {
+            LOG.error(insertSQL, e);
+            throw new RuntimeException(e);
+        } catch (Throwable e) {
+            LOG.error(insertSQL, e);
+            throw new RuntimeException(e);
+        } finally {
+            session.getJdbcCoordinator().getLogicalConnection().getResourceRegistry().release(ps);
+            session.getJdbcCoordinator().afterStatementExecution();
+        }
+    }
+
+    @Override
+    public List<Entry<Serializable, Object>> insertIdentity(List<Object> entities, SharedSessionContractImplementor session) {
         LOG.trace("");
         String insertSQL = generateIdentityInsertString(getPropertyInsertability());
         PreparedStatement ps = null;
@@ -251,6 +298,9 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
         } catch (Exception e) {
             LOG.error(insertSQL, e);
             throw new RuntimeException(e);
+        } catch (Throwable e) {
+            LOG.error(insertSQL, e);
+            throw new RuntimeException(e);
         } finally {
             session.getJdbcCoordinator().getLogicalConnection().getResourceRegistry().release(rs, ps);
             session.getJdbcCoordinator().afterStatementExecution();
@@ -260,6 +310,7 @@ public class SingleTableEntityPersisterImpl extends SingleTableEntityPersister i
     @Override
     public void update(List<Object> entities, SharedSessionContractImplementor session) {
         LOG.trace("");
+        // TODO
     }
 
     @Override
